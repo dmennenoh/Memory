@@ -11,37 +11,41 @@ public class Controller : MonoBehaviour
     [Header("Card Setup")]
     [SerializeField] private GameObject cardPrefab;
     [SerializeField] private GameObject gameBoard;
-    [SerializeField] private Sprite cardFront;
+    [SerializeField] private Sprite cardBack;
 
-    [Header("Card Backs")]
-    [SerializeField] private Sprite[] cardBacks;//one image for each pair
+    [Header("CardFaces")]
+    [SerializeField] private Sprite[] cardFaces;//one face image for each pair
 
-    //Associates each card to its cardBack image - eg index 0,1 use cardBacks[0], index 2,3 used cardBacks[1]
-    private int[] cardBackIndexes;
+    [SerializeField] private Timer gameTimer;
+    [SerializeField] private SceneController sceneController;
+
+    //Associates each card to its cardFace image - eg index 0,1 use cardFaces[0], index 2,3 used cardFaces[1]
+    private int[] cardFaceIndexes;
 
     private GameObject[] theCards;//keeps references to the card game objects for animation
 
     private int firstSelection; //index of the first selected card in the turn
-
+    private int matchesMade;
     
     void Start()
     {
         firstSelection = -1;//nothing yet selected
+        matchesMade = 0;
 
         //Number of cards dealt onto the board - twice the number of cards as card back images
-        int numCards = cardBacks.Length * 2;
+        int numCards = cardFaces.Length * 2;
 
         theCards = new GameObject[numCards];
 
-        //Contains indexes into cardBacks so that each pair of cards (0,1), (1,2), (2,3), etc.
+        //Contains indexes into cardFaces so that each pair of cards (0,1), (1,2), (2,3), etc.
         //points to the same image index in cardBacks eg (0,1) both point to cardBacks[0], (1,2) both point to cardBacks[1]
         //so before shuffling the array looks like [0,0,1,1,2,2,3,3,4,4,5,5] etc... depending on how many cards there are
-        cardBackIndexes = new int[numCards];
+        cardFaceIndexes = new int[numCards];
         for (int i = 0; i < numCards; i++)
         {
-            cardBackIndexes[i] = i / 2;//succesive pairs get the same index
+            cardFaceIndexes[i] = i / 2;//succesive pairs get the same index
         }
-        Shuffle(cardBackIndexes);
+        Shuffle(cardFaceIndexes);
 
 
         for (int i = 0; i < numCards; i++)
@@ -63,25 +67,30 @@ public class Controller : MonoBehaviour
             Material[] mats = go.GetComponent<Renderer>().materials;
             
             //material indexes are taken from the materials list on the prefab
-            Material cf = mats[3];//CardFront
-            cf.mainTexture = cardFront.texture;
+            Material cf = mats[3];//CardBack
+            cf.mainTexture = cardBack.texture;
 
             Material cb = mats[1];//CardBack           
-            cb.mainTexture = cardBacks[cardBackIndexes[i]].texture;
+            cb.mainTexture = cardFaces[cardFaceIndexes[i]].texture;
 
             Card card = go.GetComponent<Card>();
             card.Initialize(i);//inject index in the gameboard
             card.onCardClicked += OnCardClicked;
 
             theCards[i] = go;//store card instances in order to animate them
+
+            gameTimer.StartTimer();
         }
     }
 
+    public void goScene()
+    {
+        sceneController.LoadNewScene("test");
+    }
 
     //index - the card's index in the gameboard
     void OnCardClicked(int index)
     {
-        print("Clicked card:" + cardBackIndexes[index]);
         LeanTween.rotate(theCards[index], new Vector3(0, 180, 0), .5f);
 
         if(firstSelection == -1)
@@ -91,9 +100,11 @@ public class Controller : MonoBehaviour
         }
         else
         {
+            if (index == firstSelection) return;//clicked the same card again
+
             //second card in the turn was picked
-            int firstIndex = cardBackIndexes[firstSelection];
-            int secondIndex = cardBackIndexes[index];
+            int firstIndex = cardFaceIndexes[firstSelection];
+            int secondIndex = cardFaceIndexes[index];
 
             if(firstIndex == secondIndex)
             {      
@@ -103,15 +114,14 @@ public class Controller : MonoBehaviour
 
                 LeanTween.scale(theCards[firstSelection], Vector3.one * 1.25f, 0.15f).setDelay(.5f).setLoopPingPong(1);
                 LeanTween.scale(theCards[index], Vector3.one * 1.25f, 0.15f).setDelay(.5f).setLoopPingPong(1);
-                /*
-                LeanTween.scale(theCards[index], Vector3.one * 1.3f, 0.15f).setEase(LeanTweenType.easeOutBack).setOnComplete(() =>
+
+                matchesMade++;
+
+                if(matchesMade == cardFaces.Length)
                 {
-                    LeanTween.scale(theCards[index], Vector3.one * .9f, 0.15f).setEase(LeanTweenType.easeInQuad);
-                });
-                LeanTween.scale(theCards[firstSelection], Vector3.one * 1.3f, 0.15f).setEase(LeanTweenType.easeOutBack).setOnComplete(() => 
-                {                    
-                    LeanTween.scale(theCards[firstSelection], Vector3.one * .9f, 0.15f).setEase(LeanTweenType.easeInQuad);
-                });*/
+                    //game over
+                    gameTimer.StopTimer();
+                }
             }
             else
             {                
