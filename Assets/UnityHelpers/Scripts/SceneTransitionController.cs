@@ -1,10 +1,10 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement;
 using System;
+using DG.Tweening;
 
 /*
- * Uses LeanTween (V2.50) for animation
+ * Uses DOTween for animation
  */
 
 public class SceneTransitionController : MonoBehaviour
@@ -16,7 +16,8 @@ public class SceneTransitionController : MonoBehaviour
     [SerializeField] private RectTransform rightMask;
     [SerializeField] private Image rightImage;
 
-    private string currScene;
+    private RectTransform transitionCanvas;
+    private float canvasWidth;
 
     public event Action transitionHidden;
     public event Action transitionShowing;
@@ -32,21 +33,22 @@ public class SceneTransitionController : MonoBehaviour
     }
 
 
-    private void Awake()
+    private void Start()
     {
-        currScene = SceneManager.GetActiveScene().name;
+        transitionCanvas = gameObject.GetComponent<RectTransform>();
+        canvasWidth = transitionCanvas.rect.width;
 
         leftImage.sprite = transitionImage;
         rightImage.sprite = transitionImage;
 
-        Hide(false);
+        Hide(true);
     }
         
 
     public void Show()
     {
-        LeanTween.moveX(leftMask, -852, 0.5f).setEase(LeanTweenType.easeInOutCubic).setOnComplete(() => transitionShowing?.Invoke());
-        LeanTween.moveX(rightMask, 870, 0.5f).setEase(LeanTweenType.easeInOutCubic);
+        leftMask.DOAnchorPos(Vector2.zero, 0.5f).OnComplete(() => transitionShowing?.Invoke());
+        rightMask.DOAnchorPos(Vector2.zero, 0.5f);
     }
 
 
@@ -54,36 +56,14 @@ public class SceneTransitionController : MonoBehaviour
     {
         if (animate)
         {
-            LeanTween.value(gameObject, leftMask.anchoredPosition.x, -2200f, 0.5f)
-                .setEase(LeanTweenType.easeInOutCubic)
-                .setOnUpdate((float x) =>
-                {
-                    Vector2 pos = leftMask.anchoredPosition;
-                    pos.x = x;
-                    leftMask.anchoredPosition = pos;
-                })
-                .setOnComplete(() => transitionHidden?.Invoke());
-
-            LeanTween.value(gameObject, rightMask.anchoredPosition.x, 2200f, 0.5f)
-                .setEase(LeanTweenType.easeInOutCubic)
-                .setOnUpdate((float x) =>
-                {
-                    Vector2 pos = rightMask.anchoredPosition;
-                    pos.x = x;
-                    rightMask.anchoredPosition = pos;
-                });
+            leftMask.DOAnchorPos(new Vector2(-canvasWidth, 0), 0.5f).OnComplete(() => transitionHidden?.Invoke());
+            rightMask.DOAnchorPos(new Vector2(canvasWidth, 0), 0.5f);
         }
         else
         {
-            //just set the position with no animation
-            Vector2 pos = leftMask.anchoredPosition;
-            pos.x = -2200f;
-            leftMask.anchoredPosition = pos;
-
-            pos = rightMask.anchoredPosition;
-            pos.x = 2200f;
-            rightMask.anchoredPosition = pos;
-
+            //just set the position with no animation            
+            leftMask.anchoredPosition = new Vector2(-canvasWidth, 0);
+            rightMask.anchoredPosition = new Vector2(canvasWidth, 0);
             transitionHidden?.Invoke();
         }
     }

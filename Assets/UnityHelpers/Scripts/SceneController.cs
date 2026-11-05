@@ -16,12 +16,6 @@ public class SceneController : MonoBehaviour
     private string _sceneNameBeingLoaded;
 
 
-    private void Awake()
-    {
-        DontDestroyOnLoad(this);
-    }
-
-
     public void LoadNewScene(string sceneName)
     {
         _sceneNameBeingLoaded = sceneName;

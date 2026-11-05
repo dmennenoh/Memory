@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using DG.Tweening;
 
 public class Controller : MonoBehaviour
 {
@@ -27,18 +28,21 @@ public class Controller : MonoBehaviour
     private int firstSelection; //index of the first selected card in the turn
     private int matchesMade;
     
+
+
     void Start()
     {
         firstSelection = -1;//nothing yet selected
         matchesMade = 0;
 
-        //Number of cards dealt onto the board - twice the number of cards as card back images
+        //Number of cards dealt onto the board - twice the number of cards as card face images
         int numCards = cardFaces.Length * 2;
 
         theCards = new GameObject[numCards];
 
         //Contains indexes into cardFaces so that each pair of cards (0,1), (1,2), (2,3), etc.
-        //points to the same image index in cardBacks eg (0,1) both point to cardBacks[0], (1,2) both point to cardBacks[1]
+        //points to the same image index in cardFaces eg (0,1) both point to cardFaces[0], (1,2) both point to cardFaces[1]
+        //in other words they point at the same image
         //so before shuffling the array looks like [0,0,1,1,2,2,3,3,4,4,5,5] etc... depending on how many cards there are
         cardFaceIndexes = new int[numCards];
         for (int i = 0; i < numCards; i++)
@@ -74,7 +78,7 @@ public class Controller : MonoBehaviour
             cb.mainTexture = cardFaces[cardFaceIndexes[i]].texture;
 
             Card card = go.GetComponent<Card>();
-            card.Initialize(i);//inject index in the gameboard
+            card.Initialize(i);//inject array index in the gameboard
             card.onCardClicked += OnCardClicked;
 
             theCards[i] = go;//store card instances in order to animate them
@@ -88,12 +92,13 @@ public class Controller : MonoBehaviour
         sceneController.LoadNewScene("test");
     }
 
-    //index - the card's index in the gameboard
+    //index = the card's index in the gameboard
     void OnCardClicked(int index)
     {
-        LeanTween.rotate(theCards[index], new Vector3(0, 180, 0), .5f);
+        //rotating _to_ 180º so if it's clicked a second time it won't do anything
+        theCards[index].transform.DORotate(new Vector3(0, 180, 0), 0.5f);
 
-        if(firstSelection == -1)
+        if (firstSelection == -1)
         {
             //first card in the turn was picked
             firstSelection = index;
@@ -112,8 +117,8 @@ public class Controller : MonoBehaviour
                 theCards[firstSelection].GetComponent<Card>().onCardClicked -= OnCardClicked;
                 theCards[index].GetComponent<Card>().onCardClicked -= OnCardClicked;
 
-                LeanTween.scale(theCards[firstSelection], Vector3.one * 1.25f, 0.15f).setDelay(.5f).setLoopPingPong(1);
-                LeanTween.scale(theCards[index], Vector3.one * 1.25f, 0.15f).setDelay(.5f).setLoopPingPong(1);
+                theCards[firstSelection].transform.DOScale(Vector3.one * 1.25f, 0.15f).SetDelay(0.5f).SetLoops(2, LoopType.Yoyo);
+                theCards[index].transform.DOScale(Vector3.one * 1.25f, 0.15f).SetDelay(0.5f).SetLoops(2, LoopType.Yoyo);
 
                 matchesMade++;
 
@@ -124,10 +129,10 @@ public class Controller : MonoBehaviour
                 }
             }
             else
-            {                
+            {
                 //rotate cards back - set a delay to wait for the second card flipped to stop rotating
-                LeanTween.rotate(theCards[firstSelection], new Vector3(0, 0, 0), .5f).setDelay(1f);
-                LeanTween.rotate(theCards[index], new Vector3(0, 0, 0), .5f).setDelay(1f);
+                theCards[firstSelection].transform.DORotate(new Vector3(0, 0, 0), 0.5f).SetDelay(1f);
+                theCards[index].transform.DORotate(new Vector3(0, 0, 0), 0.5f).SetDelay(1f);
             }
 
             firstSelection = -1;
